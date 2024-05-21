@@ -52,7 +52,7 @@ func (r *BuildkiteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	_ = log.FromContext(ctx)
 
 	_ = log.FromContext(ctx)
-	instance := buildkitv1alpha1.Buildkit{}
+	instance := buildkitv1alpha1.Buildkite{}
 
 	err := r.Get(context.TODO(), req.NamespacedName, &instance)
 
@@ -71,6 +71,7 @@ func (r *BuildkiteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		Labels:       map[string]string{},
 		NodeSelector: map[string]string{},
 		Image:        instance.Spec.Image,
+		Secret:       instance.Spec.Secret,
 		Resource:     instance.Spec.Resources,
 		Client:       r.Client,
 	}

@@ -39,6 +39,8 @@ spec:
           spec:
             description: BuildkiteSpec defines the desired state of Buildkite
             properties:
+              git_secret:
+                type: string
               image:
                 type: string
               resources:
@@ -96,6 +98,8 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              secret:
+                type: string
             type: object
           status:
             description: BuildkiteStatus defines the observed state of Buildkite

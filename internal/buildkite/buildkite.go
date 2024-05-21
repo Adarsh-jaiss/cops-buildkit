@@ -18,6 +18,7 @@ type Buildkite struct {
 	Namespace    string
 	Labels       map[string]string
 	Image        string
+	Secret       string
 	NodeSelector map[string]string
 	Resource     corev1.ResourceRequirements
 	client.Client
@@ -91,26 +92,6 @@ func (b *Buildkite) rolebinding() (*rbacv1.RoleBinding, error) {
 				Namespace: b.Namespace,
 				Name:      b.Name,
 			},
-		},
-	}, nil
-}
-
-func (b *Buildkite) secret() (*corev1.Secret, error) {
-	labels := map[string]string{
-		"app":     b.Name,
-		"service": "buildkite",
-	}
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        b.Name,
-			Namespace:   b.Namespace,
-			Labels:      labels,
-			Annotations: map[string]string{},
-		},
-		Data: map[string][]byte{
-			"BUILDKITE_AGENT_TOKEN": []byte("certs"),
-			"BUILDKITE_TOKEN":       []byte("certs"),
 		},
 	}, nil
 }
@@ -200,7 +181,7 @@ func (b *Buildkite) deployment() (*appsv1.Deployment, error) {
 								{
 									SecretRef: &corev1.SecretEnvSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: b.Name,
+											Name: b.Secret,
 										},
 									},
 								},
@@ -251,34 +232,6 @@ func (b *Buildkite) CreateOrUpdateDeployment(ctx context.Context) error {
 		return err
 	}
 	if err := b.Client.Update(ctx, deployment); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *Buildkite) CreateOrUpdateSecret(ctx context.Context) error {
-
-	secret, err := b.secret()
-	if err != nil {
-		return err
-	}
-
-	err = b.Client.Get(ctx, types.NamespacedName{
-		Name:      b.Name,
-		Namespace: b.Namespace,
-	}, &corev1.Secret{})
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-
-			if err := b.Client.Create(ctx, secret); err != nil {
-				return err
-			}
-			return nil
-		}
-		return err
-	}
-	if err := b.Client.Update(ctx, secret); err != nil {
 		return err
 	}
 	return nil

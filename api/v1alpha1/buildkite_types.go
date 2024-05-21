@@ -26,7 +26,9 @@ import (
 
 // BuildkiteSpec defines the desired state of Buildkite
 type BuildkiteSpec struct {
-	Image string `json:"image,omitempty"`
+	Image     string `json:"image,omitempty"`
+	Secret    string `json:"secret,omitempty"`
+	GitSecret string `json:"git_secret,omitempty"`
 
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
