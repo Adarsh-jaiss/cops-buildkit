@@ -19,16 +19,20 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
+	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
+	"cops-buildkit/internal/buildkit"
 
 	"github.com/serialx/hashring"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
-	"cops-buildkit/internal/buildkit"
 )
 
 // BuildkitReconciler reconciles a Buildkit object
@@ -65,11 +69,6 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	_, ok := r.HashRing.GetNode(fmt.Sprintf("%s-%s", instance.Name, instance.Namespace))
-	if !ok {
-		r.HashRing.AddNode(fmt.Sprintf("%s-%s", instance.Name, instance.Namespace))
-	}
-
 	// Create a buildkit object
 	bk := buildkit.Buildkit{
 		Name:         req.Name,
@@ -83,6 +82,24 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		MaxReplica:   instance.Spec.MaxReplica,
 		Resource:     instance.Spec.Resources,
 		Client:       r.Client,
+	}
+	podList := &corev1.PodList{}
+
+	if err := r.List(context.Background(), podList, &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labels.Set{
+			"app": instance.Name,
+		}),
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "Error listing pods: %v\n", err)
+		return ctrl.Result{}, err
+	}
+
+	for _, p := range podList.Items {
+		_, ok := r.HashRing.GetNode(fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
+		if !ok {
+			r.HashRing.AddNode(fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
+		}
+
 	}
 
 	if err := bk.CreateOrUpdateDeployment(ctx); err != nil {
