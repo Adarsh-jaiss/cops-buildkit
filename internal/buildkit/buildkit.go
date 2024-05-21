@@ -1,14 +1,18 @@
 package buildkit
 
 import (
+	"context"
 	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Buildkit struct {
@@ -20,13 +24,13 @@ type Buildkit struct {
 	Image        string
 	NodeSelector map[string]string
 	MaxReplica   int64
-	Rootless     bool
 	Resource     corev1.ResourceRequirements
+	client.Client
 }
 
 // TODO:// Create Spec of each resource of buildkit
 // example https://github.com/andrcuns/charts/blob/main/charts/buildkit-service/templates
-func (b *Buildkit) Service() (*corev1.Service, error) {
+func (b *Buildkit) service() (*corev1.Service, error) {
 	labels := map[string]string{
 		"app": b.Name,
 	}
@@ -34,6 +38,7 @@ func (b *Buildkit) Service() (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
+			Namespace:   b.Namespace,
 			Labels:      labels,
 			Annotations: map[string]string{},
 		},
@@ -54,7 +59,7 @@ func (b *Buildkit) Service() (*corev1.Service, error) {
 	return service, nil
 }
 
-func (b *Buildkit) Deployment() (*appsv1.Deployment, error) {
+func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 	labels := map[string]string{
 		"app": b.Name,
 	}
@@ -180,13 +185,14 @@ func (b *Buildkit) Deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
-func (b *Buildkit) Secrets(ca, certs, key string) (*corev1.Secret, error) {
+func (b *Buildkit) secret(ca, certs, key string) (*corev1.Secret, error) {
 	labels := map[string]string{
 		"app": b.Name,
 	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
+			Namespace:   "default",
 			Labels:      labels,
 			Annotations: map[string]string{},
 		},
@@ -198,13 +204,14 @@ func (b *Buildkit) Secrets(ca, certs, key string) (*corev1.Secret, error) {
 	}, nil
 }
 
-func (b *Buildkit) Configmap() (*corev1.ConfigMap, error) {
+func (b *Buildkit) configmap() (*corev1.ConfigMap, error) {
 	labels := map[string]string{
 		"app": b.Name,
 	}
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
+			Namespace:   "default",
 			Labels:      labels,
 			Annotations: map[string]string{},
 		},
@@ -212,7 +219,7 @@ func (b *Buildkit) Configmap() (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-func (b *Buildkit) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
+func (b *Buildkit) podDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
 	labels := map[string]string{
 		"app": b.Name,
 	}
@@ -220,6 +227,7 @@ func (b *Buildkit) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
 			Labels:      labels,
+			Namespace:   "default",
 			Annotations: map[string]string{},
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
@@ -234,7 +242,7 @@ func (b *Buildkit) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) 
 	}, nil
 }
 
-func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.HorizontalPodAutoscaler, error) {
+func (b *Buildkit) horizontalPodAutoscalerionBudget() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	labels := map[string]string{
 		"app": b.Name,
 	}
@@ -244,6 +252,7 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
 			Labels:      labels,
+			Namespace:   "default",
 			Annotations: map[string]string{},
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
@@ -255,7 +264,7 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 			MinReplicas: &minReplica,
 			MaxReplicas: int32(b.MaxReplica),
 			Metrics: []autoscalingv2.MetricSpec{
-				autoscalingv2.MetricSpec{
+				{
 					Type: autoscalingv2.ResourceMetricSourceType,
 					Resource: &autoscalingv2.ResourceMetricSource{
 						Name: "cpu",
@@ -265,7 +274,7 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 						},
 					},
 				},
-				autoscalingv2.MetricSpec{
+				{
 					Type: autoscalingv2.ResourceMetricSourceType,
 					Resource: &autoscalingv2.ResourceMetricSource{
 						Name: "memory",
@@ -278,4 +287,172 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 			},
 		},
 	}, nil
+}
+
+func (b *Buildkit) CreateOrUpdateDeployment(ctx context.Context) error {
+
+	deployment, err := b.deployment()
+	if err != nil {
+		return err
+	}
+
+	err = b.Client.Get(ctx, types.NamespacedName{
+		Name:      b.Name,
+		Namespace: b.Namespace,
+	}, &appsv1.Deployment{})
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			if err := b.Client.Create(ctx, deployment); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	if err := b.Client.Update(ctx, deployment); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Buildkit) CreateOrUpdateService(ctx context.Context) error {
+
+	svc, err := b.service()
+	if err != nil {
+		return err
+	}
+
+	err = b.Client.Get(ctx, types.NamespacedName{
+		Name:      b.Name,
+		Namespace: b.Namespace,
+	}, &corev1.Service{})
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			if err := b.Client.Create(ctx, svc); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	if err := b.Client.Update(ctx, svc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Buildkit) CreateOrUpdateConfig(ctx context.Context) error {
+
+	cm, err := b.configmap()
+	if err != nil {
+		return err
+	}
+
+	err = b.Client.Get(ctx, types.NamespacedName{
+		Name:      b.Name,
+		Namespace: b.Namespace,
+	}, &corev1.ConfigMap{})
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			if err := b.Client.Create(ctx, cm); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	if err := b.Client.Update(ctx, cm); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Buildkit) CreateOrUpdateSecret(ctx context.Context) error {
+
+	secret, err := b.secret("sa", "sa", "sa")
+	if err != nil {
+		return err
+	}
+
+	err = b.Client.Get(ctx, types.NamespacedName{
+		Name:      b.Name,
+		Namespace: b.Namespace,
+	}, &corev1.ConfigMap{})
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			if err := b.Client.Create(ctx, secret); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	if err := b.Client.Update(ctx, secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Buildkit) CreateOrUpdatePodDisruptionBudget(ctx context.Context) error {
+
+	pdb, err := b.podDisruptionBudget()
+	if err != nil {
+		return err
+	}
+
+	err = b.Client.Get(ctx, types.NamespacedName{
+		Name:      b.Name,
+		Namespace: b.Namespace,
+	}, &policyv1.PodDisruptionBudget{})
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			if err := b.Client.Create(ctx, pdb); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	if err := b.Client.Update(ctx, pdb); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Buildkit) CreateOrUpdateHorizontalPodAutoscalerionBudget(ctx context.Context) error {
+
+	hpa, err := b.horizontalPodAutoscalerionBudget()
+	if err != nil {
+		return err
+	}
+
+	err = b.Client.Get(ctx, types.NamespacedName{
+		Name:      b.Name,
+		Namespace: b.Namespace,
+	}, &autoscalingv2.HorizontalPodAutoscaler{})
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			if err := b.Client.Create(ctx, hpa); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	if err := b.Client.Update(ctx, hpa); err != nil {
+		return err
+	}
+	return nil
 }

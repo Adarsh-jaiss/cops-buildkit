@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,8 +51,10 @@ type BuildkitReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-	instance := &buildkitv1alpha1.Buildkit{}
-	err := r.Get(context.TODO(), req.NamespacedName, instance)
+	instance := buildkitv1alpha1.Buildkit{}
+
+	err := r.Get(context.TODO(), req.NamespacedName, &instance)
+
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// object not found, could have been deleted after
@@ -67,60 +70,45 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Create certs for demon and client, You can use mkcerts
 
 	// Create a buildkit object
-	bk := buildkit.Buildkit{}
-
-	deployment, err := bk.Deployment()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Create(ctx, deployment); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	service, err := bk.Service()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Create(ctx, service); err != nil {
-		return ctrl.Result{}, err
+	bk := buildkit.Buildkit{
+		Name:         req.Name,
+		Namespace:    req.Namespace,
+		Labels:       map[string]string{},
+		NodeSelector: map[string]string{},
+		Cloud:        instance.Spec.CloudProvider,
+		Arch:         1,
+		Image:        instance.Spec.Image,
+		MaxReplica:   1,
+		Resource:     corev1.ResourceRequirements{},
+		Client:       r.Client,
 	}
 
-	// Use demon certs for create secret
-	secret, err := bk.Secrets("ca", "certs", "key")
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Create(ctx, secret); err != nil {
+	if err := bk.CreateOrUpdateDeployment(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	pdb, err := bk.PodDisruptionBudget()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Create(ctx, pdb); err != nil {
+	if err := bk.CreateOrUpdateService(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	hpa, err := bk.HorizontalPodAutoscalerionBudget()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Create(ctx, hpa); err != nil {
+	if err := bk.CreateOrUpdateSecret(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	cm, err := bk.Configmap()
-	if err != nil {
+	if err := bk.CreateOrUpdateConfig(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.Create(ctx, cm); err != nil {
+
+	if err := bk.CreateOrUpdatePodDisruptionBudget(ctx); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := bk.CreateOrUpdateHorizontalPodAutoscalerionBudget(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 
-	// Set Status to Available
 }
 
 // SetupWithManager sets up the controller with the Manager.
