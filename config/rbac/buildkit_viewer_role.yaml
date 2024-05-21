@@ -1,0 +1,23 @@
+# permissions for end users to view buildkits.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: cops-buildkit
+    app.kubernetes.io/managed-by: kustomize
+  name: buildkit-viewer-role
+rules:
+- apiGroups:
+  - cops-buildkit.thecops.dev
+  resources:
+  - buildkits
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cops-buildkit.thecops.dev
+  resources:
+  - buildkits/status
+  verbs:
+  - get

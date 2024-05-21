@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - buildkit.thecops.dev
+  resources:
+  - buildkits
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - buildkit.thecops.dev
+  resources:
+  - buildkits/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - buildkit.thecops.dev
+  resources:
+  - buildkits/status
+  verbs:
+  - get
+  - patch
+  - update
