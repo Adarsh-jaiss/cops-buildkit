@@ -80,10 +80,6 @@ func (r *BuildkiteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	if err := bk.CreateOrUpdateSecret(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	if err := bk.CreateOrUpdateDeployment(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
