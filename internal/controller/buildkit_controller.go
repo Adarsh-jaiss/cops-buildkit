@@ -18,8 +18,9 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
+	"github.com/serialx/hashring"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,7 +34,8 @@ import (
 // BuildkitReconciler reconciles a Buildkit object
 type BuildkitReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	HashRing *hashring.HashRing
 }
 
 //+kubebuilder:rbac:groups=buildkit.thecops.dev,resources=buildkits,verbs=get;list;watch;create;update;patch;delete
@@ -57,17 +59,16 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// object not found, could have been deleted after
-			// reconcile request, hence don't requeue
 			return ctrl.Result{}, nil
 		}
 
-		// error reading the object, requeue the request
 		return ctrl.Result{}, err
 	}
 
-	// TODO
-	// Create certs for demon and client, You can use mkcerts
+	_, ok := r.HashRing.GetNode(fmt.Sprintf("%s-%s", instance.Name, instance.Namespace))
+	if !ok {
+		r.HashRing.AddNode(fmt.Sprintf("%s-%s", instance.Name, instance.Namespace))
+	}
 
 	// Create a buildkit object
 	bk := buildkit.Buildkit{
@@ -78,8 +79,8 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Cloud:        instance.Spec.CloudProvider,
 		Arch:         1,
 		Image:        instance.Spec.Image,
-		MaxReplica:   1,
-		Resource:     corev1.ResourceRequirements{},
+		MaxReplica:   instance.Spec.MaxReplica,
+		Resource:     instance.Spec.Resources,
 		Client:       r.Client,
 	}
 
@@ -99,9 +100,9 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	if err := bk.CreateOrUpdatePodDisruptionBudget(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
+	// if err := bk.CreateOrUpdatePodDisruptionBudget(ctx); err != nil {
+	// 	return ctrl.Result{}, err
+	// }
 
 	if err := bk.CreateOrUpdateHorizontalPodAutoscalerionBudget(ctx); err != nil {
 		return ctrl.Result{}, err
@@ -113,6 +114,7 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BuildkitReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.HashRing = hashring.New([]string{})
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&buildkitv1alpha1.Buildkit{}).
 		Complete(r)

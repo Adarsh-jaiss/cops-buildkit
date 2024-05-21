@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: buildkit-sample
 spec:
-  cloud: aws
+  cloud: 1
   image: "moby/buildkit:latest"
   resource: {}
   max_replica: 2
