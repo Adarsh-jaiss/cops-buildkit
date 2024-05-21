@@ -96,7 +96,7 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	instance.Status.Nodes = []string{}
 	for _, p := range podList.Items {
-		instance.Status.Nodes = append(instance.Status.Nodes, fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
+		instance.Status.Nodes = append(instance.Status.Nodes, fmt.Sprintf("%s.%s.pod.cluster.local:1234", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
 	}
 
 	if err := bk.CreateOrUpdateDeployment(ctx); err != nil {
