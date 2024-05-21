@@ -96,10 +96,6 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	if err := bk.CreateOrUpdateConfig(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// if err := bk.CreateOrUpdatePodDisruptionBudget(ctx); err != nil {
 	// 	return ctrl.Result{}, err
 	// }
@@ -107,7 +103,10 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err := bk.CreateOrUpdateHorizontalPodAutoscalerionBudget(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
-
+	instance.Status.Status = true
+	if err := r.Update(ctx, &instance); err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 
 }

@@ -3,6 +3,14 @@ package buildkit
 import (
 	"context"
 	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -65,10 +73,10 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 	}
 	args := []string{
 		"--addr",
-		"unix:///run/user/1000/buildkit/buildkitd.sock",
+		"unix:///run/buildkit/buildkitd.sock",
+		"--addr",
 		"tcp://0.0.0.0:1234",
-		"unix:///run/user/1000/buildkit/buildkitd.sock",
-		"--oci-worker-no-process-sandbox",
+		"--debug",
 		"--tlscacert",
 		"/certs/ca.pem",
 		"--tlscert",
@@ -77,14 +85,9 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 		"/certs/key.pem",
 	}
 
-	var user int64 = 1000
-
+	var privileged bool = true
 	sc := corev1.SecurityContext{
-		SeccompProfile: &corev1.SeccompProfile{
-			Type: "Unconfined",
-		},
-		RunAsUser:  &user,
-		RunAsGroup: &user,
+		Privileged: &privileged,
 	}
 
 	deployment := &appsv1.Deployment{
@@ -150,20 +153,10 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "buildkitd-config",
-									},
-								},
-							},
-						},
-						{
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: "buildkitd-certs",
+									SecretName: b.Name,
 								},
 							},
 						},
@@ -185,7 +178,11 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
-func (b *Buildkit) secret(ca, certs, key string) (*corev1.Secret, error) {
+func (b *Buildkit) secret() (*corev1.Secret, error) {
+	certs, key, ca, err := generateCertificate()
+	if err != nil {
+		return nil, err
+	}
 	labels := map[string]string{
 		"app": b.Name,
 	}
@@ -197,25 +194,10 @@ func (b *Buildkit) secret(ca, certs, key string) (*corev1.Secret, error) {
 			Annotations: map[string]string{},
 		},
 		Data: map[string][]byte{
-			"cert.pem": []byte(certs),
-			"key.pem":  []byte(key),
-			// "ca.pem:" []byte(key),
+			"cert.pem": certs,
+			"key.pem":  key,
+			"ca.pem":   ca,
 		},
-	}, nil
-}
-
-func (b *Buildkit) configmap() (*corev1.ConfigMap, error) {
-	labels := map[string]string{
-		"app": b.Name,
-	}
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        b.Name,
-			Namespace:   "default",
-			Labels:      labels,
-			Annotations: map[string]string{},
-		},
-		// Data: map[string][]byte{},
 	}, nil
 }
 
@@ -345,37 +327,9 @@ func (b *Buildkit) CreateOrUpdateService(ctx context.Context) error {
 	return nil
 }
 
-func (b *Buildkit) CreateOrUpdateConfig(ctx context.Context) error {
-
-	cm, err := b.configmap()
-	if err != nil {
-		return err
-	}
-
-	err = b.Client.Get(ctx, types.NamespacedName{
-		Name:      b.Name,
-		Namespace: b.Namespace,
-	}, &corev1.ConfigMap{})
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-
-			if err := b.Client.Create(ctx, cm); err != nil {
-				return err
-			}
-			return nil
-		}
-		return err
-	}
-	if err := b.Client.Update(ctx, cm); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (b *Buildkit) CreateOrUpdateSecret(ctx context.Context) error {
 
-	secret, err := b.secret("sa", "sa", "sa")
+	secret, err := b.secret()
 	if err != nil {
 		return err
 	}
@@ -455,4 +409,58 @@ func (b *Buildkit) CreateOrUpdateHorizontalPodAutoscalerionBudget(ctx context.Co
 		return err
 	}
 	return nil
+}
+
+func generateCertificate() (certs []byte, key []byte, ca []byte, err error) {
+	// Generate a new private key
+	privateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Create a self-signed certificate
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Your Organization"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(1, 0, 0), // Valid for 1 year
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Encode the certificate and private key to PEM format
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyBytes})
+
+	// Generate a CA certificate (self-signed)
+	caTemplate := x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject: pkix.Name{
+			Organization: []string{"Your CA Organization"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0), // Valid for 10 years
+		KeyUsage:              x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caBytes})
+
+	return certPEM, keyPEM, caPEM, nil
 }
