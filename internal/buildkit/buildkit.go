@@ -367,7 +367,7 @@ func (b *Buildkit) CreateOrUpdateSecret(ctx context.Context) error {
 	err = b.Client.Get(ctx, types.NamespacedName{
 		Name:      b.Name,
 		Namespace: b.Namespace,
-	}, &corev1.ConfigMap{})
+	}, &corev1.Secret{})
 
 	if err != nil {
 		if errors.IsNotFound(err) {

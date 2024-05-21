@@ -79,6 +79,10 @@ type BuildkitStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Status bool `json:"status,omitempty"`
+
+	State string `json:"state"`
+
+	Nodes []string `json:"nodes"`
 }
 
 //+kubebuilder:object:root=true

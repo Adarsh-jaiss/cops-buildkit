@@ -94,12 +94,9 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	instance.Status.Nodes = []string{}
 	for _, p := range podList.Items {
-		_, ok := r.HashRing.GetNode(fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
-		if !ok {
-			r.HashRing.AddNode(fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
-		}
-
+		instance.Status.Nodes = append(instance.Status.Nodes, fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(p.Status.HostIP, ".", "-"), instance.Namespace))
 	}
 
 	if err := bk.CreateOrUpdateDeployment(ctx); err != nil {
@@ -122,6 +119,7 @@ func (r *BuildkitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 	instance.Status.Status = true
+	instance.Status.State = "Available"
 	if err := r.Update(ctx, &instance); err != nil {
 		return ctrl.Result{}, err
 	}
