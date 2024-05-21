@@ -191,9 +191,9 @@ func (b *Buildkit) Secrets(ca, certs, key string) (*corev1.Secret, error) {
 			Annotations: map[string]string{},
 		},
 		Data: map[string][]byte{
-			"ca.pem:" []byte(ca),
 			"cert.pem": []byte(certs),
-			"key.pem": []byte(key)
+			"key.pem":  []byte(key),
+			// "ca.pem:" []byte(key),
 		},
 	}, nil
 }
@@ -208,9 +208,7 @@ func (b *Buildkit) Configmap() (*corev1.ConfigMap, error) {
 			Labels:      labels,
 			Annotations: map[string]string{},
 		},
-		Data: map[string][]byte{
-			"buildkitd.toml" []byte(""),
-		},
+		// Data: map[string][]byte{},
 	}, nil
 }
 
@@ -228,7 +226,10 @@ func (b *Buildkit) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) 
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
-			minAvailable: 1,
+			MinAvailable: &intstr.IntOrString{
+				Type:   intstr.Int,
+				IntVal: 1,
+			},
 		},
 	}, nil
 }
@@ -237,6 +238,8 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 	labels := map[string]string{
 		"app": b.Name,
 	}
+	var minReplica int32 = 1
+	var avg int32 = 80
 	return &autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
@@ -246,10 +249,10 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",
-				Kind: "Deployment",
-				Name: b.Name,
+				Kind:       "Deployment",
+				Name:       b.Name,
 			},
-			MinReplicas: 1,
+			MinReplicas: &minReplica,
 			MaxReplicas: int32(b.MaxReplica),
 			Metrics: []autoscalingv2.MetricSpec{
 				autoscalingv2.MetricSpec{
@@ -257,8 +260,8 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 					Resource: &autoscalingv2.ResourceMetricSource{
 						Name: "cpu",
 						Target: autoscalingv2.MetricTarget{
-							Type: autoscalingv2.UtilizationMetricType,
-							AverageUtilization: 80,
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: &avg,
 						},
 					},
 				},
@@ -267,12 +270,12 @@ func (b *Buildkit) HorizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 					Resource: &autoscalingv2.ResourceMetricSource{
 						Name: "memory",
 						Target: autoscalingv2.MetricTarget{
-							Type: autoscalingv2.UtilizationMetricType,
-							AverageUtilization: 80,
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: &avg,
 						},
 					},
 				},
 			},
-		}
+		},
 	}, nil
 }
