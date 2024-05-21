@@ -200,8 +200,6 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 						},
 					},
 					NodeSelector: b.NodeSelector,
-					// Affinity: &corev1.Affinity{},
-					// Tolerations: []corev1.Toleration{},
 				},
 			},
 		},
@@ -221,7 +219,7 @@ func (b *Buildkit) secret() (*corev1.Secret, error) {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
-			Namespace:   "default",
+			Namespace:   b.Namespace,
 			Labels:      labels,
 			Annotations: map[string]string{},
 		},
@@ -241,7 +239,7 @@ func (b *Buildkit) podDisruptionBudget() (*policyv1.PodDisruptionBudget, error) 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
 			Labels:      labels,
-			Namespace:   "default",
+			Namespace:   b.Namespace,
 			Annotations: map[string]string{},
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
@@ -266,7 +264,7 @@ func (b *Buildkit) horizontalPodAutoscalerionBudget() (*autoscalingv2.Horizontal
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        b.Name,
 			Labels:      labels,
-			Namespace:   "default",
+			Namespace:   b.Namespace,
 			Annotations: map[string]string{},
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
