@@ -7,6 +7,32 @@ rules:
 - apiGroups:
   - buildkit.thecops.dev
   resources:
+  - buildkites
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - buildkit.thecops.dev
+  resources:
+  - buildkites/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - buildkit.thecops.dev
+  resources:
+  - buildkites/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - buildkit.thecops.dev
+  resources:
   - buildkits
   verbs:
   - create

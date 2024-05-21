@@ -70,7 +70,8 @@ func (b *Buildkit) service() (*corev1.Service, error) {
 
 func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 	labels := map[string]string{
-		"app": b.Name,
+		"app":     b.Name,
+		"service": "buildkit",
 	}
 	args := []string{
 		"--addr",

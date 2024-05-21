@@ -2,4 +2,5 @@
 resources:
 - cops-buildkit_v1alpha1_buildkit.yaml
 - buildkit_v1alpha1_buildkit.yaml
+- buildkit_v1alpha1_buildkite.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
