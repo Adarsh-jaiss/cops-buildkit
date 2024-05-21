@@ -28,9 +28,10 @@ type Buildkit struct {
 	Namespace    string
 	Labels       map[string]string
 	Cloud        buildkitv1alpha1.CloudProvider
-	Arch         buildkitv1alpha1.Arch
+	Arch         []buildkitv1alpha1.Arch
 	Image        string
 	NodeSelector map[string]string
+	Rootless     bool
 	MaxReplica   int64
 	Resource     corev1.ResourceRequirements
 	client.Client
@@ -85,9 +86,37 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 		"/certs/key.pem",
 	}
 
+	if b.Rootless {
+		args = []string{
+			"--addr",
+			"unix:///run/user/1000/buildkit/buildkitd.sock",
+			"--addr",
+			"tcp://0.0.0.0:1234",
+			"--oci-worker-no-process-sandbox",
+			"--debug",
+			"--tlscacert",
+			"/certs/ca.pem",
+			"--tlscert",
+			"/certs/cert.pem",
+			"--tlskey",
+			"/certs/key.pem",
+		}
+
+	}
 	var privileged bool = true
+	var user int64 = 1000
 	sc := corev1.SecurityContext{
 		Privileged: &privileged,
+	}
+
+	if b.Rootless {
+		sc = corev1.SecurityContext{
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: corev1.SeccompProfileTypeUnconfined,
+			},
+			RunAsUser:  &user,
+			RunAsGroup: &user,
+		}
 	}
 
 	deployment := &appsv1.Deployment{
@@ -104,11 +133,14 @@ func (b *Buildkit) deployment() (*appsv1.Deployment, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
+					Annotations: map[string]string{
+						"container.apparmor.security.beta.kubernetes.io/buildkitd": "unconfined",
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "buildkit-agent",
+							Name:  "buildkitd",
 							Image: b.Image,
 							Ports: []corev1.ContainerPort{
 								{

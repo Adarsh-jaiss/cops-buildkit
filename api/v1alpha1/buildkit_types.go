@@ -59,6 +59,8 @@ type BuildkitSpec struct {
 	// CloudProvider
 	CloudProvider CloudProvider `json:"cloud,omitempty"`
 
+	Arch []Arch `json:"arch,omitempty"`
+
 	Image string `json:"image,omitempty"`
 
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -68,6 +70,8 @@ type BuildkitSpec struct {
 	PublicCertsSecretName string `json:"public_certs,omitempty"`
 
 	DaemonCertsSecretName string `json:"daemon_certs,omitempty"`
+
+	Rootless bool `json:"rootless,omitempty"`
 }
 
 // BuildkitStatus defines the observed state of Buildkit

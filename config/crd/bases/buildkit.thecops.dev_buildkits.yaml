@@ -39,6 +39,10 @@ spec:
           spec:
             description: BuildkitSpec defines the desired state of Buildkit
             properties:
+              arch:
+                items:
+                  type: integer
+                type: array
               cloud:
                 description: CloudProvider
                 type: integer
@@ -106,6 +110,8 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              rootless:
+                type: boolean
             type: object
           status:
             description: BuildkitStatus defines the observed state of Buildkit
