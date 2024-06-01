@@ -1,0 +1,22 @@
+module "k8scluster" {
+  source                        = "yindia/saas/opta//modules/aws_eks"
+  version                       = "0.0.2-beta2"
+  env_name                      = "production"
+  layer_name                    = "production"
+  module_name                   = "k8scluster"
+  cluster_name                  = "copscluster"
+  kms_account_key_arn           = module.base.kms_account_key_arn
+  private_subnet_ids            = module.base.private_subnet_ids
+  vpc_id                        = module.base.vpc_id
+  eks_log_retention             = 7
+  max_nodes                     = 3
+  min_nodes                     = 2
+  node_disk_size                = 20
+  node_instance_type            = "t3.medium"
+  k8s_version                   = "1.26"
+  control_plane_security_groups = []
+  spot_instances                = false
+  enable_metrics                = false
+  node_launch_template          = {}
+  ami_type                      = "AL2_x86_64"
+}
