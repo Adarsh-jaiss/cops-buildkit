@@ -2,7 +2,7 @@ package buildkit
 
 import (
 	"context"
-	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
+	buildkitv1alpha1 "cops/api/v1alpha1"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"

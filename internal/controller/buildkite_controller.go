@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
-	"cops-buildkit/internal/buildkite"
+	buildkitv1alpha1 "cops/api/v1alpha1"
+	"cops/internal/buildkite"
 )
 
 // BuildkiteReconciler reconciles a Buildkite object
@@ -35,9 +35,9 @@ type BuildkiteReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=buildkit.thecops.dev,resources=buildkites,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=buildkit.thecops.dev,resources=buildkites/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=buildkit.thecops.dev,resources=buildkites/finalizers,verbs=update
+//+kubebuilder:rbac:groups=thecops.dev,resources=buildkites,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=thecops.dev,resources=buildkites/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=thecops.dev,resources=buildkites/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

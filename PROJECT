@@ -5,25 +5,34 @@
 domain: thecops.dev
 layout:
 - go.kubebuilder.io/v4
-projectName: cops-buildkit
-repo: cops-buildkit
+projectName: cops
+repo: cops
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: thecops.dev
-  group: buildkit
+  group: cops
   kind: Buildkit
-  path: cops-buildkit/api/v1alpha1
+  path: cops/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: thecops.dev
-  group: buildkit
+  group: cops
   kind: Buildkite
-  path: cops-buildkit/api/v1alpha1
+  path: cops/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: thecops.dev
+  group: cops
+  kind: BuildkitePipeline
+  path: cops/api/v1alpha1
   version: v1alpha1
 version: "3"

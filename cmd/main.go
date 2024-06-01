@@ -34,9 +34,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	buildkitv1alpha1 "cops-buildkit/api/v1alpha1"
-	copsbuildkitv1alpha1 "cops-buildkit/api/v1alpha1"
-	"cops-buildkit/internal/controller"
+	buildkitv1alpha1 "cops/api/v1alpha1"
+	copsbuildkitv1alpha1 "cops/api/v1alpha1"
+	copsv1alpha1 "cops/api/v1alpha1"
+	"cops/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -50,6 +51,7 @@ func init() {
 
 	utilruntime.Must(copsbuildkitv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(buildkitv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(copsv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -136,6 +138,13 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Buildkite")
+		os.Exit(1)
+	}
+	if err = (&controller.BuildkitePipelineReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BuildkitePipeline")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

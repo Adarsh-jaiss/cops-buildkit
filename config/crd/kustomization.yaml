@@ -5,6 +5,7 @@ resources:
 - bases/cops-buildkit.thecops.dev_buildkits.yaml
 - bases/buildkit.thecops.dev_buildkits.yaml
 - bases/buildkit.thecops.dev_buildkites.yaml
+- bases/cops.thecops.dev_buildkitepipelines.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -16,6 +17,7 @@ patches:
 # patches here are for enabling the CA injection for each CRD
 #- path: patches/cainjection_in_buildkits.yaml
 #- path: patches/cainjection_in_buildkites.yaml
+#- path: patches/cainjection_in_buildkitepipelines.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section

@@ -1,0 +1,27 @@
+# permissions for end users to edit buildkitepipelines.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: cops
+    app.kubernetes.io/managed-by: kustomize
+  name: buildkitepipeline-editor-role
+rules:
+- apiGroups:
+  - cops.thecops.dev
+  resources:
+  - buildkitepipelines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cops.thecops.dev
+  resources:
+  - buildkitepipelines/status
+  verbs:
+  - get

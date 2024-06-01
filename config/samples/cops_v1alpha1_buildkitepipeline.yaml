@@ -1,0 +1,9 @@
+apiVersion: cops.thecops.dev/v1alpha1
+kind: BuildkitePipeline
+metadata:
+  labels:
+    app.kubernetes.io/name: cops
+    app.kubernetes.io/managed-by: kustomize
+  name: buildkitepipeline-sample
+spec:
+  # TODO(user): Add fields here

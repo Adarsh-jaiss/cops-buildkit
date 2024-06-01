@@ -1,4 +1,4 @@
-module cops-buildkit
+module cops
 
 go 1.21
 
