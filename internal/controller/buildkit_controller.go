@@ -42,9 +42,9 @@ type BuildkitReconciler struct {
 	HashRing *hashring.HashRing
 }
 
-//+kubebuilder:rbac:groups=thecops.dev,resources=buildkits,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=thecops.dev,resources=buildkits/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=thecops.dev,resources=buildkits/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cops.thecops.dev,resources=buildkits,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cops.thecops.dev,resources=buildkits/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cops.thecops.dev,resources=buildkits/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

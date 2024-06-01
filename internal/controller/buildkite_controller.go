@@ -35,9 +35,9 @@ type BuildkiteReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=thecops.dev,resources=buildkites,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=thecops.dev,resources=buildkites/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=thecops.dev,resources=buildkites/finalizers,verbs=update
+//+kubebuilder:rbac:groups=cops.thecops.dev,resources=buildkites,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=cops.thecops.dev,resources=buildkites/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=cops.thecops.dev,resources=buildkites/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

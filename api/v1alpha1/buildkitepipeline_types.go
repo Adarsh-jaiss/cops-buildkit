@@ -22,7 +22,6 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // BuildkitePipelineSpec defines the desired state of BuildkitePipeline
 type BuildkitePipelineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -38,9 +37,8 @@ type BuildkitePipelineStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // BuildkitePipeline is the Schema for the buildkitepipelines API
 type BuildkitePipeline struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -50,8 +48,7 @@ type BuildkitePipeline struct {
 	Status BuildkitePipelineStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-
+// +kubebuilder:object:root=true
 // BuildkitePipelineList contains a list of BuildkitePipeline
 type BuildkitePipelineList struct {
 	metav1.TypeMeta `json:",inline"`
